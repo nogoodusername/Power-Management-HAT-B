@@ -68,6 +68,7 @@ bool Power_on_by_Cycle_Init(datetime_t *Now_Time,uint32_t power_on_keep_time,uin
 bool Power_Ctrl_By_Period_Time(void);
 
 bool Power_Ctrl_By_Button(void);
+bool Power_Ctrl_By_Vin(void);
 
 bool Power_On_Period_Time(datetime_t *Power_On_Time);
 

@@ -38,6 +38,11 @@ uint16_t Wait_Boot_Time_S = 90;
 uint16_t Shutdown_Time_Ms = 2000;
 uint16_t Power_Off_Time_Ms = 8000;
 
+bool Power_Up_Interrupt = false;
+uint16_t Power_Up_Delay_Time_Ms = 2000;
+uint16_t Power_Down_Delay_Time_Ms = 8000;
+float Usb_Vin_Threshold = 4.30f;
+
 static struct repeating_timer timer;
 /******************************************************************************
     function: Timer_Callback
@@ -79,18 +84,18 @@ bool Inc_To_Time(datetime_t *Time, uint32_t Inc_time)
     uint32_t Cnt = Time_To_Int(Time);
     if (Inc_time > one_day_sec)
     {
-        Debug("error:Inc_time too long!!! Inc_time = %d \r\n",Inc_time);
+        Debug("error:Inc_time too long!!! Inc_time = %d \r\n", Inc_time);
         return 0;
     }
     if (Inc_time < 60)
     {
-        Debug("error:Inc_time too short!!! Inc_time = %d \r\n",Inc_time);
+        Debug("error:Inc_time too short!!! Inc_time = %d \r\n", Inc_time);
         return 0;
     }
     last_time = Cnt + Inc_time;
     if (last_time > one_day_sec)
     {
-        Time->day += 1 ;
+        Time->day += 1;
         last_time -= one_day_sec;
     }
     Time->hour = last_time / 3600 % 24;
@@ -358,8 +363,8 @@ bool Power_on_by_Period_Time_Init(datetime_t *Now_Time, datetime_t *Power_On_Tim
 bool Power_on_by_Cycle_Init(datetime_t *Now_Time, uint32_t power_on_keep_time, uint32_t power_off_keep_time, bool State)
 {
     datetime_t Next_Alarm_Time;
-    keep_time[0]=power_on_keep_time;
-    keep_time[1]=power_off_keep_time;
+    keep_time[0] = power_on_keep_time;
+    keep_time[1] = power_off_keep_time;
     Power_RTC_init(Now_Time);
     PCF85063A_Read_now(&Next_Alarm_Time);
     Inc_To_Time(&Next_Alarm_Time, State ? power_on_keep_time : power_off_keep_time);
@@ -401,7 +406,7 @@ bool Power_Ctrl_By_Period_Time(void)
             Shutdown();
         }
         power_all_state.Rtc_Change_State = false;
-        
+
         add_repeating_timer_ms(power_all_state.Power_State ? 200 : 600, Timer_Callback, NULL, &timer);
     }
     return power_all_state.Power_State;
@@ -452,6 +457,7 @@ bool Power_Ctrl_By_Button(void)
             Wait_For_Boot();
         }
     }
+
     if (power_all_state.Change_State == true)
     {
         power_all_state.Change_State = false;
@@ -460,6 +466,81 @@ bool Power_Ctrl_By_Button(void)
     }
 
     return power_all_state.Power_State;
+}
+
+/******************************************************************************
+    function: Power_Ctrl_By_Period_Time
+    brief : The power supply is controlled by Vin. Power on when USB plugged in. Power off after 8 seconds of USB unplug.
+    parameter:
+******************************************************************************/
+bool Power_Ctrl_By_Vin(void)
+{
+    uint32_t Power_Down_Delay_Time = 0;
+
+    DEV_Delay_ms(1000);
+
+    Power_All_State read_state = Power_State_Get_All();
+
+    if (read_state.Vin_Voltage >= Usb_Vin_Threshold)
+    {
+        if (Power_Up_Interrupt)
+        {
+            DEV_Delay_ms(Power_Up_Delay_Time_Ms);
+            Power_Up_Interrupt = false;
+        }
+
+        if (power_all_state.Running_State)
+        {
+            // Do nothing, pi is running
+        }
+        else
+        {
+            cancel_repeating_timer(&timer);
+            DEV_Digital_Write(LED_STA_PIN, 1);
+
+            // Wait Raspberry Pi boot.
+            printf("Power ON Voltage Detected \r\n");
+            Debug("Power on Raspberry Pi. \r\n\r\n\r\n");
+            Wait_For_Boot();
+
+            cancel_repeating_timer(&timer);
+            add_repeating_timer_ms(1000, Timer_Callback, NULL, &timer);
+        }
+    }
+    else
+    {
+        if (power_all_state.Power_State)
+        {
+            for (Power_Down_Delay_Time = 0; Power_Down_Delay_Time <= Power_Down_Delay_Time_Ms; Power_Down_Delay_Time++)
+            {
+                DEV_Delay_ms(1);
+
+                if (Power_Down_Delay_Time == 0)
+                {
+                    cancel_repeating_timer(&timer);
+                    add_repeating_timer_ms(500, Timer_Callback, NULL, &timer);
+                }
+
+                if (Power_Down_Delay_Time % 1000 == 0)
+                {
+                    Debug("Power_Down_Delay_Time = %d ms\r\n", Power_Down_Delay_Time);
+                }
+            }
+
+            if (Power_Down_Delay_Time > Power_Down_Delay_Time_Ms)
+            {
+                Debug("Waited %d ms\r\n", Power_Down_Delay_Time);
+
+                cancel_repeating_timer(&timer);
+                add_repeating_timer_ms(3000, Timer_Callback, NULL, &timer);
+
+                // Wait Raspberry Pi Shutdown
+                Debug("Wait Raspberry Pi Shutdown. \r\n");
+                Power_Up_Interrupt = true;
+                Shutdown();
+            }
+        }
+    }
 }
 
 /******************************************************************************

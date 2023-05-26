@@ -37,7 +37,7 @@
 #include "Power_Management_Lib.h"
 #include "MP28167.h"
 
-#define USE_CURRENT_TO_CHECK_PI_STATUS 0
+#define USE_CURRENT_TO_CHECK_PI_STATUS 1
 #if USE_CURRENT_TO_CHECK_PI_STATUS
 #define Shutdown_Current_Ma 320
 #endif

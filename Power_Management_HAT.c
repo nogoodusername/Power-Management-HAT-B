@@ -38,20 +38,13 @@ extern Power_All_State Read_State;
 int main()
 {
   /* Initialize function */
-  //Button_Ctr_Init();
-  Period_Time_Init();
-  //Cycle_Time_Init();
-
+  Button_Ctr_Init();
 
   /*Calls loop functions*/
   while (true)
   {
     
-    //Button_Ctr_Loop();
-    Period_Time_Loop();
-    //Cycle_Time_Loop();
-
-    
+    Button_Ctr_Loop();
   }
 
   return 0;

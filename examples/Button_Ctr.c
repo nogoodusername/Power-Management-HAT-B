@@ -43,7 +43,7 @@ void Button_Ctr_Init(void)
     
     Power_init();
     MP28167_Default_Config();
-    add_repeating_timer_ms(1500, Timer_Callback, NULL, &timer);
+    add_repeating_timer_ms(2000, Timer_Callback, NULL, &timer);
 }
 /******************************************************************************
     function: Button_Ctr_Loop
@@ -53,7 +53,7 @@ void Button_Ctr_Init(void)
 void Button_Ctr_Loop(void)
 {
     static bool power_state, running_state;
-    power_state = Power_Ctrl_By_Button();
+    power_state = Power_Ctrl_By_Vin();
 }
 /******************************************************************************
     function: Timer_Callback
@@ -82,7 +82,7 @@ static bool Timer_Callback(struct repeating_timer *t)
         // Check whether the current is lower than the shutdown current
         if (Check_Runing_State_By_CURRENT(Shutdown_Current_Ma) == false)
         {
-            Debug("detected current low.\r\n");
+            Debug("Detected current low.\r\n");
             Power_off();
         }
         Read_State = Power_State_Get_All();
