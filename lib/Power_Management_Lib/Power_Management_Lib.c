@@ -39,7 +39,7 @@ uint16_t Shutdown_Time_Ms = 2000;
 uint16_t Power_Off_Time_Ms = 8000;
 
 bool Power_Up_Interrupt = false;
-uint16_t Power_Up_Delay_Time_Ms = 2000;
+uint16_t Power_Up_Delay_Time_Ms = 4000;
 uint16_t Power_Down_Delay_Time_Ms = 8000;
 float Usb_Vin_Threshold = 4.30f;
 
